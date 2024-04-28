@@ -4,8 +4,84 @@ import numpy as np
 import cv2
 import math
 import os 
+import tkinter as tk
+from tkinter import *
+from PIL import Image, ImageTk
 
 
+class LaneDetectionModel:
+    def __init__(self, videoSource):
+        self.cap = cv2.VideoCapture(videoSource)
+    def detection(self):
+        ret, frame = self.cap.read()
+        if ret:
+            image = processer(frame)
+            return image
+            #cv2.imshow("Processed Frame with Overlays", image)
+
+class LaneDetector:
+    def __init__(self, window, window_title, video_source=0):
+        self.window = window
+        self.window_title = window_title
+        #self.cap = cv2.VideoCapture(video_source)
+        self.btn_switch_model = tk.Button(window, text="Switch Model", width=15, command=self.switch_model)
+        self.btn_switch_model.pack(anchor=tk.CENTER, expand=True)
+        #btn = Button(window, text = 'Click me !', bd = '5',
+       #                   command = self.switch_model) 
+        self.label = tk.Label(window)
+        self.label.pack()
+
+# Set the position of button on the top of window.   
+        #btn.pack(side = 'top')
+
+        self.video_sources = {
+                "Model 1": 0,
+                "Model 2": 1,
+                "Model 3": 2
+                }
+        self.current_model = "Model 1"
+        model1 = LaneDetectionModel(self.video_sources["Model 1"])
+        model2 = LaneDetectionModel(self.video_sources["Model 2"])
+        model3 = LaneDetectionModel(self.video_sources["Model 1"])
+        self.models = {
+            "Model 1": model1,
+            "Model 2": model2,
+            "Model 3": model3
+        }
+
+        self.update()
+        
+        self.window.mainloop()
+
+    def switch_model(self):
+        self.current_model = "Model 2" if self.current_model == "Model 1" else "Model 1"
+    
+    def update(self):
+        image1 = self.models["Model 1"].detection()
+        image2 = self.models["Model 2"].detection()
+        image3 = self.models["Model 3"].detection()
+        if self.current_model == "Model 1":
+            image = image1
+        elif self.current_model == "Model 2":
+            image = image2
+        else:
+            image = image3
+        #cv2.imshow("Processed Frame with Overlays", image)
+        try:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        except:
+            pass
+            # Convert the frame to a PIL Image
+        img = Image.fromarray(image)
+        #img = img.resize((self.label.winfo_width(), self.label.winfo_height()), Image.ANTIALIAS)
+            
+            # Convert the resized PIL Image to a Tkinter-compatible image
+        # Convert the PIL Image to a Tkinter-compatible image
+        imgtk = ImageTk.PhotoImage(image=img)
+        # Display the image on the label
+        self.label.imgtk = imgtk
+        self.label.configure(image=imgtk)
+        self.window.after(10, self.update)
 def display_lines(image, lines):
     lines_image = np.zeros_like(image)
     if lines is not None:
@@ -71,7 +147,7 @@ def processer(image):
     #plt.imshow(grayImage, cmap = plt.cm.gray)
     #plt.show()
 
-    grayImage = cv2.GaussianBlur(grayImage, (5, 5), 0)
+    grayImage = cv2.blur(grayImage, (5, 5))
     cannyImage = cv2.Canny(grayImage, 25, 75)
 #plt.figure()
     #plt.imshow(cannyImage, cmap = plt.cm.gray)
@@ -97,6 +173,7 @@ def processer(image):
     cv2.fillPoly(mask, vertices, ignore_mask_color)
 # performing Bitwise AND on the input image and mask to get only the edges on the road
     masked_image = cv2.bitwise_and(cannyImage, mask)
+    #return masked_image
 
 
 
@@ -137,7 +214,8 @@ def processer(image):
         #plt.imshow(lanes)
         #plt.show()
     else:
-        image = cv2.putText(image, 'NO LANE DETECTED', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        image = cv2.putText(image, 'CAUTION: OUT OF LANE BOUNDS', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        print("THIS FAILED")
         return image
         #plt.imshow(image)
 
@@ -147,7 +225,18 @@ def processer(image):
 
 
 
+'''
 cap = cv2.VideoCapture(1)
+
+app = Tk() 
+  
+# Bind the app with Escape keyboard to 
+# quit app whenever pressed 
+app.bind('<Escape>', lambda e: app.quit()) 
+  
+# Create a label and display it on app 
+label_widget = Label(app) 
+label_widget.pack() 
 
     # Check if the webcam opened successfully
 if not cap.isOpened():
@@ -173,5 +262,10 @@ cap.release()
 cv2.destroyAllWindows()
 
 
-
+'''
+root = tk.Tk()
+# Set the window title
+root.title("Webcam App")
+# Create the WebcamApp object with the Tkinter window as its parent
+app = LaneDetector(root, "Webcam App")
 
