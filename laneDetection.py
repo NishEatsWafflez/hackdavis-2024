@@ -15,8 +15,8 @@ class LaneDetectionModel:
     def detection(self):
         ret, frame = self.cap.read()
         if ret:
-            image = processer(frame)
-            return image
+            image, status = processer(frame)
+            return image, status
             #cv2.imshow("Processed Frame with Overlays", image)
 
 class LaneDetector:
@@ -57,15 +57,23 @@ class LaneDetector:
         self.current_model = "Model 2" if self.current_model == "Model 1" else "Model 1"
     
     def update(self):
-        image1 = self.models["Model 1"].detection()
-        image2 = self.models["Model 2"].detection()
-        image3 = self.models["Model 3"].detection()
+        image1, status1 = self.models["Model 1"].detection()
+        image2, status2 = self.models["Model 2"].detection()
+        image3, status3 = self.models["Model 3"].detection()
+        if not status1:
+            self.current_model == "Model 1"
+        elif not status1:
+            self.current_model == "Model 2"
+        elif not status1:
+            self.current_model == "Model 3"
         if self.current_model == "Model 1":
             image = image1
         elif self.current_model == "Model 2":
             image = image2
         else:
             image = image3
+            
+
         #cv2.imshow("Processed Frame with Overlays", image)
         try:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -210,13 +218,13 @@ def processer(image):
 
         lanes = cv2.addWeighted(image, 0.8, black_lines, 1, 1)
         lanes = cv2.circle(lanes, (int(center), height//2), 5, (0, 0, 255), -1)
-        return lanes
+        return lanes, True
         #plt.imshow(lanes)
         #plt.show()
     else:
         image = cv2.putText(image, 'CAUTION: OUT OF LANE BOUNDS', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         print("THIS FAILED")
-        return image
+        return image, False
         #plt.imshow(image)
 
 
