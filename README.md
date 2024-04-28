@@ -24,6 +24,9 @@ Use an Arduino and an ultrasonic distance sensor to alert the driver if they are
 
 ![2024-04-27_15-23](https://github.com/JakeRoggenbuck/hackdavis-2024/assets/35516367/a878533e-4dcf-426a-9683-86fece80e0d9)
 
+![image](https://github.com/JakeRoggenbuck/hackdavis-2024/assets/35516367/8d26845a-87a4-490c-8c3b-339f4e3b70de)
+
+
 ## OpenCV Lane Detection
 
 ### Original Image
