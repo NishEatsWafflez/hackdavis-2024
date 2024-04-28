@@ -1,3 +1,4 @@
+from __future__ import print_function
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimage
 import numpy as np
@@ -10,11 +11,101 @@ from PIL import Image, ImageTk
 import serial
 import numpy as np
 import cv2
+import sys
+from random import randint
 
 hog = cv2.HOGDescriptor()
 hog.setSVMDetector(
     cv2.HOGDescriptor_getDefaultPeopleDetector(),
 )
+# roi_x = 50
+# roi_y = 50
+# roi_w = 50
+# roi_h = 50
+
+FACE_THRESHOLD = 50
+
+class FaceDetector:
+    def __init__(self, source):
+        self.cap = cv2.VideoCapture(source)
+    def detection(self):
+        ret, frame = self.cap.read()
+        if ret:
+            frame = cv2.resize(frame, (640, 480))
+            image, status = faceProcess(frame)
+            print(status)
+            return image, status
+        return None, True
+def faceProcess(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    height, width = frame.shape[:2]
+    roi_x = width//3
+    roi_y = height//4
+    roi_w = width//3
+    roi_h = height//2
+    
+
+    # contours, _ = cv2.findContours(preprocess(frame), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_eye.xml")
+    faces = face_cascade.detectMultiScale(frame, 1.3, 5, minSize=(40, 40))
+    status = True
+
+    if not any(map(len, faces)):
+        print("Face has crossed the threshold!")
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        cv2.putText(frame, 'Look Out!', (10,450), font, 3, (0, 255, 0), 2, cv2.LINE_AA)
+        status = False
+
+    else:
+        # Draw bounding boxes around the detected contours
+        for (x,y,w,h) in faces:
+            # x, y, w, h = cv2.boundingRect(face)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+
+            # Calculate the center of the face
+            face_center_x = x + w // 2
+            face_center_y = y + h // 2
+
+            # Calculate the center of the ROI
+            roi_center_x = roi_x + roi_w // 2
+            roi_center_y = roi_y + roi_h // 2
+
+            # Calculate the distance between the face center and the ROI center
+            distance = ((face_center_x - roi_center_x) ** 2 + (face_center_y - roi_center_y) ** 2) ** 0.5
+
+            # Check if the face has passed the threshold
+            if (distance > FACE_THRESHOLD):
+                # Do something when the facea passes the threshold (e.g., print a message)
+                print("Face has crossed the threshold!")
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.putText(frame, 'Look Out!', (10,450), font, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                status = False
+                
+
+
+                # These are causing errors (probably b/c we don't have anything connected).
+                # ser = serial.Serial('/dev/ttyACM0', 9600)
+                # ser.write(b'SIGNAL') 
+                # ser.close()
+
+            roi_gray = gray[y:y+h, x:x+w]
+            roi_color = frame[y:y+h, x:x+w]
+            
+            eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 5)
+            for (ex,ey,ew,eh) in eyes:
+                cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+
+              
+
+
+    # Draw the ROI frame
+    cv2.rectangle(frame, (roi_x, roi_y), (roi_x+roi_w, roi_y+roi_h), (0, 255, 0), 2)
+    return frame, True
+
+
 
 
 class HumanDetector:
@@ -107,12 +198,13 @@ class LaneDetector:
         self.video_sources = {
                 "Model 1": 0,
                 "Model 2": 1,
-                "Model 3": 1
+                "Model 3": 2
                 }
         self.current_model = "Model 1"
         model1 = LaneDetectionModel(self.video_sources["Model 1"])
-        model2 = LaneDetectionModel(self.video_sources["Model 2"])
-        model3 = LaneDetectionModel(self.video_sources["Model 3"])
+        model2 = FaceDetector(self.video_sources["Model 2"])
+        model3 = HumanDetector(self.video_sources["Model 3"])
+
         self.models = {
             "Model 1": model1,
             "Model 2": model2,
@@ -146,12 +238,17 @@ class LaneDetector:
 
 
         #cv2.imshow("Processed Frame with Overlays", image)
+        if image is None:
+            self.window.after(10, self.update)
+
+
         try:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(image)
         except:
+            print(image)
             pass
             # Convert the frame to a PIL Image
-        img = Image.fromarray(image)
         #img = img.resize((self.label.winfo_width(), self.label.winfo_height()), Image.ANTIALIAS)
 
             # Convert the resized PIL Image to a Tkinter-compatible image
@@ -294,7 +391,6 @@ def processer(image):
         print(center)
 
         lanes = cv2.addWeighted(image, 0.8, black_lines, 1, 1)
-        lanes = cv2.circle(lanes, (int(center), height//2), 5, (0, 0, 255), -1)
         return lanes, True
         #plt.imshow(lanes)
         #plt.show()
