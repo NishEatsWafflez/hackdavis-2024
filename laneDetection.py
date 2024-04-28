@@ -7,6 +7,8 @@ import os
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
+import serial
+
 
 
 class LaneDetectionModel:
@@ -15,17 +17,29 @@ class LaneDetectionModel:
     def detection(self):
         ret, frame = self.cap.read()
         if ret:
+            frame = cv2.resize(frame, (640, 480))
             image, status = processer(frame)
+            print(status)
             return image, status
+        return None, True
             #cv2.imshow("Processed Frame with Overlays", image)
 
 class LaneDetector:
     def __init__(self, window, window_title, video_source=0):
         self.window = window
         self.window_title = window_title
+        self.button_frame = tk.Frame(window)
+        self.button_frame.pack(side=tk.TOP, fill=tk.X)
         #self.cap = cv2.VideoCapture(video_source)
-        self.btn_switch_model = tk.Button(window, text="Switch Model", width=15, command=self.switch_model)
-        self.btn_switch_model.pack(anchor=tk.CENTER, expand=True)
+        self.btn_switch_model = tk.Button(self.button_frame, text="Lane Detection", width=15, command=lambda: self.switch_model("Model 1"))
+        self.btn2_switch_model = tk.Button(self.button_frame, text="Facial Tracking", width=15, command=lambda: self.switch_model("Model 2"))
+        self.btn3_switch_model = tk.Button(self.button_frame, text="Blind Spot", width=15, command=lambda: self.switch_model("Model 3"))
+        self.btn_switch_model.pack(side=tk.LEFT, expand=True)
+        self.btn2_switch_model.pack(side=tk.LEFT, expand=True)
+        self.btn3_switch_model.pack(side=tk.LEFT, expand=True)
+        #self.btn_switch_model.grid(row=0, column=0)
+        #self.btn2_switch_model.grid(row=0, column=1)
+        #self.btn3_switch_model.grid(row=0, column=2)
         #btn = Button(window, text = 'Click me !', bd = '5',
        #                   command = self.switch_model) 
         self.label = tk.Label(window)
@@ -37,12 +51,12 @@ class LaneDetector:
         self.video_sources = {
                 "Model 1": 0,
                 "Model 2": 1,
-                "Model 3": 2
+                "Model 3": 1
                 }
         self.current_model = "Model 1"
         model1 = LaneDetectionModel(self.video_sources["Model 1"])
         model2 = LaneDetectionModel(self.video_sources["Model 2"])
-        model3 = LaneDetectionModel(self.video_sources["Model 1"])
+        model3 = LaneDetectionModel(self.video_sources["Model 3"])
         self.models = {
             "Model 1": model1,
             "Model 2": model2,
@@ -53,19 +67,20 @@ class LaneDetector:
         
         self.window.mainloop()
 
-    def switch_model(self):
-        self.current_model = "Model 2" if self.current_model == "Model 1" else "Model 1"
+    def switch_model(self, model):
+        print("THE NEW MODEL  SHOULD BE" + model)
+        self.current_model = model
     
     def update(self):
         image1, status1 = self.models["Model 1"].detection()
         image2, status2 = self.models["Model 2"].detection()
         image3, status3 = self.models["Model 3"].detection()
         if not status1:
-            self.current_model == "Model 1"
-        elif not status1:
-            self.current_model == "Model 2"
-        elif not status1:
-            self.current_model == "Model 3"
+            self.current_model = "Model 1"
+        elif not status2:
+            self.current_model = "Model 2"
+        elif not status3:
+            self.current_model = "Model 3"
         if self.current_model == "Model 1":
             image = image1
         elif self.current_model == "Model 2":
@@ -121,12 +136,18 @@ def average(image, lines):
     right_avg = np.average(right, axis=0)
     left_avg = np.average(left, axis=0)
     farLeft, farRight = False, False
+    #ser = serial.Serial('/dev/ttyACM0', 9600)
     try:
         farLeft = math.isnan(right_avg)
+        #ser = serial.Serial('/dev/ttyACM0', 9600)
+        #ser.write(b'LANE_LEFT_SIG') 
+        #ser.close()
     except:
         farLeft = False
     try:
         farRight = math.isnan(left_avg)
+        #ser.write(b'LANE_RIGHT_SIG') 
+        #ser.close()
     except:
         farRight = False
     if farLeft or farRight:
