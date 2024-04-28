@@ -3,17 +3,71 @@ import matplotlib.image as mpimage
 import numpy as np
 import cv2
 import math
-import os 
+import os
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
 import serial
+import numpy as np
+import cv2
 
+hog = cv2.HOGDescriptor()
+hog.setSVMDetector(
+    cv2.HOGDescriptor_getDefaultPeopleDetector(),
+)
+
+
+class HumanDetector:
+    def __init__(self, source):
+        self.cap = cv2.VideoCapture(source)
+
+    def process(self, frame, boxes):
+        status = True
+
+        if len(boxes) > 0:
+
+            for box in boxes:
+
+                w = box[2] - box[0]
+                h = box[3] - box[1]
+
+                if h > 250:
+                    status = False
+
+                    print(w, h)
+
+        return frame, status
+
+    def detection(self):
+        ret, frame = self.cap.read()
+
+        if ret:
+
+            frame = cv2.resize(frame, (640, 480))
+            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+
+            boxes, weights = hog.detectMultiScale(frame, winStride=(8, 8))
+
+            boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in boxes])
+
+            for xA, yA, xB, yB in boxes:
+                cv2.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 2)
+
+            # Human is TOO close - False
+
+            # Human is safe distance - True
+
+            frame, status = self.process(frame, boxes)
+
+            return frame, status
+
+        return None, False
 
 
 class LaneDetectionModel:
     def __init__(self, videoSource):
         self.cap = cv2.VideoCapture(videoSource)
+
     def detection(self):
         ret, frame = self.cap.read()
         if ret:
@@ -22,7 +76,9 @@ class LaneDetectionModel:
             print(status)
             return image, status
         return None, True
-            #cv2.imshow("Processed Frame with Overlays", image)
+
+        #cv2.imshow("Processed Frame with Overlays", image)
+
 
 class LaneDetector:
     def __init__(self, window, window_title, video_source=0):
@@ -41,11 +97,11 @@ class LaneDetector:
         #self.btn2_switch_model.grid(row=0, column=1)
         #self.btn3_switch_model.grid(row=0, column=2)
         #btn = Button(window, text = 'Click me !', bd = '5',
-       #                   command = self.switch_model) 
+       #                   command = self.switch_model)
         self.label = tk.Label(window)
         self.label.pack()
 
-# Set the position of button on the top of window.   
+# Set the position of button on the top of window.
         #btn.pack(side = 'top')
 
         self.video_sources = {
@@ -64,13 +120,13 @@ class LaneDetector:
         }
 
         self.update()
-        
+
         self.window.mainloop()
 
     def switch_model(self, model):
         print("THE NEW MODEL  SHOULD BE" + model)
         self.current_model = model
-    
+
     def update(self):
         image1, status1 = self.models["Model 1"].detection()
         image2, status2 = self.models["Model 2"].detection()
@@ -87,7 +143,7 @@ class LaneDetector:
             image = image2
         else:
             image = image3
-            
+
 
         #cv2.imshow("Processed Frame with Overlays", image)
         try:
@@ -97,7 +153,7 @@ class LaneDetector:
             # Convert the frame to a PIL Image
         img = Image.fromarray(image)
         #img = img.resize((self.label.winfo_width(), self.label.winfo_height()), Image.ANTIALIAS)
-            
+
             # Convert the resized PIL Image to a Tkinter-compatible image
         # Convert the PIL Image to a Tkinter-compatible image
         imgtk = ImageTk.PhotoImage(image=img)
@@ -132,7 +188,7 @@ def average(image, lines):
             left.append((slope, y_int))
         else:
             right.append((slope, y_int))
-            
+
     right_avg = np.average(right, axis=0)
     left_avg = np.average(left, axis=0)
     farLeft, farRight = False, False
@@ -140,13 +196,13 @@ def average(image, lines):
     try:
         farLeft = math.isnan(right_avg)
         #ser = serial.Serial('/dev/ttyACM0', 9600)
-        #ser.write(b'LANE_LEFT_SIG') 
+        #ser.write(b'LANE_LEFT_SIG')
         #ser.close()
     except:
         farLeft = False
     try:
         farRight = math.isnan(left_avg)
-        #ser.write(b'LANE_RIGHT_SIG') 
+        #ser.write(b'LANE_RIGHT_SIG')
         #ser.close()
     except:
         farRight = False
@@ -165,8 +221,8 @@ def make_points(image, average):
     x2 = int((y2 - y_int) // slope)
     return np.array([x1, y1, x2, y2])
 
-  
-# Read the video from specified path 
+
+# Read the video from specified path
 
 
 #plt.imshow(image)
@@ -257,15 +313,15 @@ def processer(image):
 '''
 cap = cv2.VideoCapture(1)
 
-app = Tk() 
-  
-# Bind the app with Escape keyboard to 
-# quit app whenever pressed 
-app.bind('<Escape>', lambda e: app.quit()) 
-  
-# Create a label and display it on app 
-label_widget = Label(app) 
-label_widget.pack() 
+app = Tk()
+
+# Bind the app with Escape keyboard to
+# quit app whenever pressed
+app.bind('<Escape>', lambda e: app.quit())
+
+# Create a label and display it on app
+label_widget = Label(app)
+label_widget.pack()
 
     # Check if the webcam opened successfully
 if not cap.isOpened():

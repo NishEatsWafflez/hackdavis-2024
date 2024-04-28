@@ -55,14 +55,15 @@ class HumanDetector:
         return None, False
 
 
-h = HumanDetector(0)
+if __name__ == "__main__":
+    h = HumanDetector(0)
 
-while True:
-    frame, status = h.detection()
-    cv2.imshow("frame", frame)
+    while True:
+        frame, status = h.detection()
+        cv2.imshow("frame", frame)
 
-    if not status:
-        print("PERSON!!!")
+        if not status:
+            print("PERSON!!!")
 
-    if cv2.waitKey(1) == ord('q'):
-        break
+        if cv2.waitKey(1) == ord('q'):
+            break
